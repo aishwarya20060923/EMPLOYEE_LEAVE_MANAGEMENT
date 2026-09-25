@@ -75,8 +75,11 @@ def create_app(config_class=Config):
 
     return app
 
-if __name__ == '__main__':
     application = create_app()
+
+
+if __name__ == '__main__':
+    
     with application.app_context():
         db.create_all()
     print("Starting Employee Leave Management System...")
