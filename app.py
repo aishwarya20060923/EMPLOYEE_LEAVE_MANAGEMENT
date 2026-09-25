@@ -73,14 +73,16 @@ def create_app(config_class=Config):
         db.session.rollback()
         return render_template('errors/500.html'), 500
 
+       # Create database tables
+    with app.app_context():
+        db.create_all()
+
     return app
 
-    application = create_app()
+
+application = create_app()
 
 
 if __name__ == '__main__':
-    
-    with application.app_context():
-        db.create_all()
     print("Starting Employee Leave Management System...")
     application.run(host='127.0.0.1', port=5000, debug=True)
