@@ -1,0 +1,36 @@
+﻿{% extends "base.html" %}
+{% block title %}System Settings{% endblock %}
+{% block page_title %}System Settings & Diagnostics{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">ELMS Application Parameters</h3>
+    </div>
+    <div class="card-body" style="font-size: 13.5px; color: var(--slate-700); line-height: 1.8;">
+      <div><strong>Application Title:</strong> Employee Leave Management System (ELMS)</div>
+      <div><strong>Backend Architecture:</strong> Python 3.11 + Flask (Jinja2 Templates)</div>
+      <div><strong>Database Engine:</strong> SQLite 3 via SQLAlchemy ORM</div>
+      <div><strong>Frontend Tech:</strong> HTML5, CSS3, Vanilla ES6 JavaScript, Chart.js</div>
+      <div><strong>Security:</strong> Werkzeug SHA-256 Hashing, Session Authentication & RBAC</div>
+      <div><strong>Current Session User:</strong> {{ current_user.email }} ({{ current_user.role }})</div>
+      <div><strong>Working Year:</strong> {{ current_year }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Leave Policies & Rules Overview</h3>
+    </div>
+    <div class="card-body" style="font-size: 13.5px; color: var(--slate-700); line-height: 1.8;">
+      <div><strong>Weekend Exclusion:</strong> Saturday & Sunday excluded from working days.</div>
+      <div><strong>Holiday Exclusion:</strong> Mandatory national holidays automatically excluded.</div>
+      <div><strong>Conflict Prevention:</strong> Overlapping date requests strictly blocked.</div>
+      <div><strong>Quota Deduction:</strong> Automatic deduction upon Manager/Admin approval.</div>
+      <div><strong>Quota Restoration:</strong> Automatic balance restoration upon eligible cancellation.</div>
+      <div><strong>Attendance Link:</strong> Approved leaves automatically recorded as Leave status.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

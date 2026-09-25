@@ -1,0 +1,150 @@
+﻿{% extends "base.html" %}
+{% block title %}Apply for Leave{% endblock %}
+{% block page_title %}Apply for Leave{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <!-- Leave Application Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">New Leave Application</h2>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('employee.apply_leave') }}" enctype="multipart/form-data" id="leaveApplicationForm">
+        <!-- Leave Type -->
+        <div class="form-group">
+          <label for="leave_type_id" class="form-label">Leave Type <span class="required">*</span></label>
+          <select id="leave_type_id" name="leave_type_id" class="form-control" required>
+            <option value="" disabled selected>-- Select Leave Type --</option>
+            {% for lt in leave_types %}
+              {% set b = balances.get(lt.id) %}
+              {% set rem = b.remaining_days if b else 0.0 %}
+              <option value="{{ lt.id }}" data-balance="{{ rem }}">
+                {{ lt.name }} (Available: {{ rem }} days)
+              </option>
+            {% endfor %}
+          </select>
+          <div id="balance_warning" style="display: none; color: var(--danger); font-size: 12px; margin-top: 6px; font-weight: 600;"></div>
+        </div>
+
+        <!-- Date Range -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label for="start_date" class="form-label">Start Date <span class="required">*</span></label>
+            <input type="date" id="start_date" name="start_date" class="form-control" required min="{{ today.strftime('%Y-%m-%d') }}">
+          </div>
+
+          <div class="form-group">
+            <label for="end_date" class="form-label">End Date <span class="required">*</span></label>
+            <input type="date" id="end_date" name="end_date" class="form-control" required min="{{ today.strftime('%Y-%m-%d') }}">
+          </div>
+        </div>
+
+        <!-- Half Day Option -->
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; cursor: pointer;">
+            <input type="checkbox" id="is_half_day" name="is_half_day" value="1">
+            Apply as Half Day (0.5 working day)
+          </label>
+        </div>
+
+        <div class="form-group" id="half_day_type_container" style="display: none;">
+          <label for="half_day_type" class="form-label">Half Day Session</label>
+          <select id="half_day_type" name="half_day_type" class="form-control">
+            <option value="First Half">First Half (Morning Session)</option>
+            <option value="Second Half">Second Half (Afternoon Session)</option>
+          </select>
+        </div>
+
+        <!-- Live Working Days Calculation Banner -->
+        <div id="calculated_days_display" style="display: none; padding: 14px 18px; background: var(--primary-50); border: 1px solid var(--primary-200); border-radius: var(--radius-md); margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--primary-700);">Working Days to Deduct:</div>
+              <div id="calculated_days_val" style="font-size: 20px; font-weight: 800; color: var(--primary-800);">1 day</div>
+            </div>
+            <div id="calculated_days_note" style="font-size: 12px; color: var(--slate-600); text-align: right;"></div>
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="form-group">
+          <label for="reason" class="form-label">Reason for Leave <span class="required">*</span></label>
+          <textarea id="reason" name="reason" class="form-control" placeholder="Provide a detailed and clear reason for your leave request..." rows="3" required></textarea>
+        </div>
+
+        <!-- Attachment -->
+        <div class="form-group">
+          <label for="attachment" class="form-label">Optional Attachment (Medical certificate, ticket, etc.)</label>
+          <input type="file" id="attachment" name="attachment" class="form-control" accept=".png,.jpg,.jpeg,.pdf,.doc,.docx">
+          <div class="form-text">Supported formats: PNG, JPG, PDF, DOC, DOCX. Max size: 16MB.</div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+          <button type="submit" class="btn btn-primary" style="flex: 1;">
+            Submit Leave Request
+          </button>
+          <a href="{{ url_for('employee.dashboard') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Information & Holidays Sidebar -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <!-- Smart Validation Information Card -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <h3 class="card-title">Smart Leave Calculation Rules</h3>
+      </div>
+      <div class="card-body" style="font-size: 13px; color: var(--slate-600); line-height: 1.6;">
+        <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+          <li><strong>Weekend Exclusion:</strong> Saturdays and Sundays falling within your leave period are automatically excluded from leave deductions.</li>
+          <li><strong>Holiday Exclusion:</strong> Mandatory national and organizational holidays are automatically excluded from your working days calculation.</li>
+          <li><strong>Conflict Detection:</strong> The system automatically prevents overlapping applications with existing pending or approved requests.</li>
+          <li><strong>Balance Verification:</strong> Applications exceeding your available balance cannot be submitted.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Upcoming Holidays List -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <h3 class="card-title">Upcoming Holidays (Excluded from Leaves)</h3>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        {% if upcoming_holidays %}
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Holiday</th>
+                <th>Date</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in upcoming_holidays %}
+              <tr>
+                <td style="font-weight: 600; color: var(--slate-800);">{{ h.name }}</td>
+                <td>{{ h.date.strftime('%d %b %Y (%a)') }}</td>
+                <td>
+                  {% if h.is_optional %}
+                  <span class="badge" style="background: var(--purple-bg); color: var(--purple-text);">Optional</span>
+                  {% else %}
+                  <span class="badge" style="background: var(--info-bg); color: var(--info-text);">Mandatory</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="padding: 20px; text-align: center; color: var(--slate-500);">No upcoming holidays in the near future.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,163 @@
+﻿{% extends "base.html" %}
+{% block title %}My Leave Requests{% endblock %}
+{% block page_title %}My Leave Requests{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('employee.my_leaves') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center;">
+    <input type="text" name="search" class="form-control" style="max-width: 220px;" placeholder="Search Req ID or Reason..." value="{{ search_query }}">
+
+    <select name="status" class="form-control" style="max-width: 160px;">
+      <option value="">All Statuses</option>
+      <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+      <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+      <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+
+    <select name="leave_type" class="form-control" style="max-width: 180px;">
+      <option value="">All Leave Types</option>
+      {% for lt in leave_types %}
+      <option value="{{ lt.id }}" {% if leave_type_filter == lt.id %}selected{% endif %}>{{ lt.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if status_filter or leave_type_filter or search_query %}
+    <a href="{{ url_for('employee.my_leaves') }}" class="btn btn-outline" style="color: var(--slate-500);">Clear</a>
+    {% endif %}
+
+    <div style="margin-left: auto;">
+      <a href="{{ url_for('employee.apply_leave') }}" class="btn btn-primary">+ Apply Leave</a>
+    </div>
+  </form>
+</div>
+
+<!-- Leave Requests Table -->
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    {% if leave_requests %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Request ID</th>
+            <th>Leave Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Applied On</th>
+            <th>Status</th>
+            <th>Reviewed By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in leave_requests %}
+          <tr>
+            <td><strong style="color: var(--slate-900);">{{ r.request_number }}</strong></td>
+            <td>
+              <div>{{ r.leave_type.name }}</div>
+              {% if r.is_half_day %}
+              <span class="badge" style="background: var(--purple-bg); color: var(--purple-text); font-size: 10px;">{{ r.half_day_type or 'Half Day' }}</span>
+              {% endif %}
+            </td>
+            <td>{{ r.start_date.strftime('%d %b %Y') }}</td>
+            <td>{{ r.end_date.strftime('%d %b %Y') }}</td>
+            <td><strong>{{ r.days_requested }}</strong></td>
+            <td style="max-width: 220px;" title="{{ r.reason }}">
+              <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ r.reason }}</div>
+              {% if r.rejection_reason %}
+              <div style="font-size: 11px; color: var(--danger); margin-top: 2px;">Note: {{ r.rejection_reason }}</div>
+              {% endif %}
+              {% if r.cancellation_reason %}
+              <div style="font-size: 11px; color: var(--slate-500); margin-top: 2px;">Cancelled: {{ r.cancellation_reason }}</div>
+              {% endif %}
+            </td>
+            <td>{{ r.applied_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <span class="badge badge-{{ r.status.lower() }}">
+                <span class="badge-dot"></span>
+                {{ r.status }}
+              </span>
+            </td>
+            <td>
+              {% if r.reviewed_by %}
+                {{ r.reviewed_by.full_name }}
+                <div style="font-size: 10.5px; color: var(--slate-400);">{{ r.reviewed_at.strftime('%d %b') if r.reviewed_at else '' }}</div>
+              {% else %}
+                <span style="color: var(--slate-400); font-size: 12px;">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <!-- Cancel Logic: Allowed if Pending, OR if Approved and start_date >= today -->
+              {% if r.status == 'Pending' or (r.status == 'Approved' and r.start_date >= today) %}
+              <button type="button" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger-border);" onclick="openCancelModal('{{ r.id }}', '{{ r.request_number }}', '{{ r.status }}')">
+                Cancel
+              </button>
+              {% else %}
+              <span style="color: var(--slate-400); font-size: 12px;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No Leave Requests Found</div>
+      <p class="empty-text">No requests match your current search or filter criteria.</p>
+      <a href="{{ url_for('employee.apply_leave') }}" class="btn btn-primary btn-sm">Apply for Leave</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Cancel Leave Modal -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Cancel Leave Request</h3>
+      <button type="button" class="modal-close" onclick="closeModal('cancelModal')">&times;</button>
+    </div>
+    <form method="POST" id="cancelForm" action="">
+      <div class="modal-body">
+        <p style="font-size: 13.5px; margin-bottom: 16px;">
+          Are you sure you want to cancel request <strong id="modalReqNum"></strong>?
+        </p>
+        <div id="approvedLeaveNotice" style="display: none; padding: 10px 14px; background: var(--info-bg); color: var(--info-text); border-radius: var(--radius-sm); font-size: 12.5px; margin-bottom: 16px;">
+          ℹ️ This is an approved future leave. Cancelling will automatically restore the leave balance to your quota.
+        </div>
+        <div class="form-group">
+          <label for="cancellation_reason" class="form-label">Cancellation Reason</label>
+          <input type="text" id="cancellation_reason" name="cancellation_reason" class="form-control" placeholder="Change of plans, rescheduled, etc." required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('cancelModal')">Close</button>
+        <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openCancelModal(reqId, reqNum, status) {
+  const form = document.getElementById('cancelForm');
+  form.action = '/employee/cancel-leave/' + reqId;
+  document.getElementById('modalReqNum').textContent = reqNum;
+  
+  const notice = document.getElementById('approvedLeaveNotice');
+  if (status === 'Approved') {
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+  openModal('cancelModal');
+}
+</script>
+{% endblock %}

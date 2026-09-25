@@ -1,0 +1,125 @@
+﻿{% extends "base.html" %}
+{% block title %}Manage Holidays{% endblock %}
+{% block page_title %}Organization Holiday Calendar{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Configured Holidays (Auto-Excluded from Leaves)</h2>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openAddHolidayModal()">+ Add Holiday</button>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Holiday Name</th>
+            <th>Description</th>
+            <th>Classification</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in holidays %}
+          <tr>
+            <td><strong>{{ h.date.strftime('%d %b %Y (%A)') }}</strong></td>
+            <td><strong style="color: var(--slate-900);">{{ h.name }}</strong></td>
+            <td style="color: var(--slate-600); font-size: 13px;">{{ h.description or '—' }}</td>
+            <td>
+              {% if h.is_optional %}
+              <span class="badge" style="background: var(--purple-bg); color: var(--purple-text);">Optional / Restricted</span>
+              {% else %}
+              <span class="badge" style="background: var(--info-bg); color: var(--info-text);">Mandatory (National/Org)</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="openEditHolidayModal('{{ h.id }}', '{{ h.name }}', '{{ h.date.strftime('%Y-%m-%d') }}', '{{ h.description or '' }}', {{ 'true' if h.is_optional else 'false' }})">
+                  Edit
+                </button>
+                <form method="POST" action="{{ url_for('admin.holidays') }}" style="display: inline;">
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="hol_id" value="{{ h.id }}">
+                  <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger-border);" onclick="return confirm('Delete holiday {{ h.name }}?');">
+                    Delete
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Holiday Modal -->
+<div class="modal-overlay" id="holModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="holModalTitle">Add Holiday</h3>
+      <button type="button" class="modal-close" onclick="closeModal('holModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.holidays') }}">
+      <input type="hidden" id="holAction" name="action" value="add">
+      <input type="hidden" id="holId" name="hol_id" value="">
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="holName" class="form-label">Holiday Name <span class="required">*</span></label>
+          <input type="text" id="holName" name="name" class="form-control" required placeholder="e.g. Diwali">
+        </div>
+
+        <div class="form-group">
+          <label for="holDate" class="form-label">Date <span class="required">*</span></label>
+          <input type="date" id="holDate" name="date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="holDesc" class="form-label">Description</label>
+          <textarea id="holDesc" name="description" class="form-control" rows="2" placeholder="Festival details, government gazette ref..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer;">
+            <input type="checkbox" id="holIsOptional" name="is_optional" value="1">
+            Optional / Floating Holiday (Mandatory holidays are automatically deducted from leave calculations)
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('holModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="holSubmitBtn">Save Holiday</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddHolidayModal() {
+  document.getElementById('holAction').value = 'add';
+  document.getElementById('holId').value = '';
+  document.getElementById('holName').value = '';
+  document.getElementById('holDate').value = '';
+  document.getElementById('holDesc').value = '';
+  document.getElementById('holIsOptional').checked = false;
+  document.getElementById('holModalTitle').textContent = 'Add Holiday';
+  document.getElementById('holSubmitBtn').textContent = 'Create Holiday';
+  openModal('holModal');
+}
+
+function openEditHolidayModal(id, name, dateVal, desc, isOpt) {
+  document.getElementById('holAction').value = 'edit';
+  document.getElementById('holId').value = id;
+  document.getElementById('holName').value = name;
+  document.getElementById('holDate').value = dateVal;
+  document.getElementById('holDesc').value = desc;
+  document.getElementById('holIsOptional').checked = isOpt;
+  document.getElementById('holModalTitle').textContent = 'Edit Holiday';
+  document.getElementById('holSubmitBtn').textContent = 'Update Holiday';
+  openModal('holModal');
+}
+</script>
+{% endblock %}

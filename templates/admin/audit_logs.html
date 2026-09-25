@@ -1,0 +1,91 @@
+﻿{% extends "base.html" %}
+{% block title %}System Audit Logs{% endblock %}
+{% block page_title %}Security & System Audit Trails{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('admin.audit_logs') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center;">
+    <input type="text" name="search" class="form-control" style="max-width: 240px;" placeholder="Search user, action, detail..." value="{{ search_query }}">
+
+    <select name="action" class="form-control" style="max-width: 200px;">
+      <option value="">All Actions</option>
+      {% for a in actions %}
+      <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if action_filter or search_query %}
+    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-outline" style="color: var(--slate-500);">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Audit Log Table -->
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    {% if logs.items %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Timestamp (UTC)</th>
+            <th>User Email</th>
+            <th>Action</th>
+            <th>Record Type</th>
+            <th>Record ID</th>
+            <th>Audit Details</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in logs.items %}
+          <tr>
+            <td style="font-size: 12px; color: var(--slate-500); white-space: nowrap;">
+              {{ l.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+            </td>
+            <td><strong>{{ l.user_email or 'System' }}</strong></td>
+            <td>
+              <span class="badge" style="background: var(--slate-100); color: var(--slate-800); font-size: 11px;">
+                {{ l.action }}
+              </span>
+            </td>
+            <td>{{ l.record_type or '—' }}</td>
+            <td>{{ l.record_id or '—' }}</td>
+            <td style="max-width: 320px; font-size: 13px; color: var(--slate-600);" title="{{ l.details }}">
+              {{ l.details or '—' }}
+            </td>
+            <td style="font-size: 11px; color: var(--slate-400);">{{ l.ip_address or '127.0.0.1' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if logs.pages > 1 %}
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-top: 1px solid var(--slate-200);">
+      <div style="font-size: 12.5px; color: var(--slate-500);">
+        Page {{ logs.page }} of {{ logs.pages }} ({{ logs.total }} total entries)
+      </div>
+      <div style="display: flex; gap: 8px;">
+        {% if logs.has_prev %}
+        <a href="{{ url_for('admin.audit_logs', page=logs.prev_num, action=action_filter, search=search_query) }}" class="btn btn-outline btn-sm">← Previous</a>
+        {% endif %}
+        {% if logs.has_next %}
+        <a href="{{ url_for('admin.audit_logs', page=logs.next_num, action=action_filter, search=search_query) }}" class="btn btn-outline btn-sm">Next →</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🛡️</div>
+      <div class="empty-title">No Audit Logs Found</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

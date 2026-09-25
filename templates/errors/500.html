@@ -1,0 +1,14 @@
+﻿{% extends "base.html" %}
+{% block title %}500 Internal Server Error{% endblock %}
+{% block page_title %}Internal Server Error{% endblock %}
+
+{% block content %}
+<div class="empty-state" style="padding: 80px 20px;">
+  <div style="font-size: 72px; font-weight: 900; color: var(--warning); line-height: 1; margin-bottom: 16px;">500</div>
+  <h2 class="empty-title" style="font-size: 22px;">Internal Server Error</h2>
+  <p class="empty-text">The server encountered an unexpected error while processing your request. The transaction has been rolled back safely.</p>
+  <a href="/" class="btn btn-primary" style="margin-top: 16px;">
+    Return to Dashboard
+  </a>
+</div>
+{% endblock %}

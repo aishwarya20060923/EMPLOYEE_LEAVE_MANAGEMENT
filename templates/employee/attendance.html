@@ -1,0 +1,101 @@
+﻿{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Attendance Record{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="margin-bottom: 24px;">
+  <!-- Check in widget -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Today's Attendance</h3>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-size: 13px; color: var(--slate-500);">Current Date</div>
+          <div style="font-size: 18px; font-weight: 700; color: var(--slate-800);">{{ today.strftime('%A, %d %B %Y') }}</div>
+        </div>
+        <div>
+          {% if not today_record %}
+          <form method="POST" action="{{ url_for('employee.attendance') }}">
+            <button type="submit" name="action" value="checkin" class="btn btn-success">
+              ✓ Clock In Now
+            </button>
+          </form>
+          {% else %}
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="badge badge-present" style="padding: 8px 14px; font-size: 13px;">
+              Status: {{ today_record.status }} (In: {{ today_record.check_in or 'Logged' }})
+            </span>
+            {% if not today_record.check_out and today_record.status == 'Present' %}
+            <form method="POST" action="{{ url_for('employee.attendance') }}">
+              <button type="submit" name="action" value="checkout" class="btn btn-outline btn-sm">
+                Clock Out
+              </button>
+            </form>
+            {% elif today_record.check_out %}
+            <span style="font-size: 12px; color: var(--slate-500);">Out: {{ today_record.check_out }}</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Leave Integration Note</h3>
+    </div>
+    <div class="card-body" style="font-size: 13px; color: var(--slate-600); line-height: 1.6;">
+      <p>Your approved leaves are automatically linked and reflected as <strong>Leave</strong> in your organizational attendance record without requiring manual check-ins during those days.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance History Log -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Recent Attendance Log (Past 60 Days)</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if records %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Status</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in records %}
+          <tr>
+            <td><strong>{{ a.date.strftime('%d %b %Y') }}</strong></td>
+            <td>{{ a.date.strftime('%A') }}</td>
+            <td>
+              <span class="badge badge-{{ a.status.lower().replace(' ', '') }}">
+                {{ a.status }}
+              </span>
+            </td>
+            <td>{{ a.check_in or '—' }}</td>
+            <td>{{ a.check_out or '—' }}</td>
+            <td><span style="color: var(--slate-500); font-size: 12px;">{{ a.notes or '—' }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-title">No Attendance Records</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

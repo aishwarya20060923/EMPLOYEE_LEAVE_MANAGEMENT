@@ -1,0 +1,116 @@
+﻿{% extends "base.html" %}
+{% block title %}Manage Departments{% endblock %}
+{% block page_title %}Department Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Organizational Departments</h2>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openAddDeptModal()">+ Add Department</button>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Department Name</th>
+            <th>Description</th>
+            <th>Employees</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in departments %}
+          <tr>
+            <td><strong>{{ d.code }}</strong></td>
+            <td><strong style="color: var(--slate-900);">{{ d.name }}</strong></td>
+            <td style="max-width: 280px; color: var(--slate-600); font-size: 13px;">{{ d.description or '—' }}</td>
+            <td><span class="badge" style="background: var(--slate-100); color: var(--slate-700);">{{ d.employees.count() }} members</span></td>
+            <td>
+              <span class="badge {% if d.is_active %}badge-present{% else %}badge-absent{% endif %}">
+                {% if d.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="openEditDeptModal('{{ d.id }}', '{{ d.name }}', '{{ d.code }}', '{{ d.description or '' }}')">
+                  Edit
+                </button>
+                <form method="POST" action="{{ url_for('admin.departments') }}" style="display: inline;">
+                  <input type="hidden" name="action" value="toggle">
+                  <input type="hidden" name="dept_id" value="{{ d.id }}">
+                  <button type="submit" class="btn btn-outline btn-sm" style="{% if d.is_active %}color: var(--danger); border-color: var(--danger-border);{% else %}color: var(--success); border-color: var(--success-border);{% endif %}" onclick="return confirm('Change status for {{ d.name }}?');">
+                    {% if d.is_active %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Department Modal -->
+<div class="modal-overlay" id="deptModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="deptModalTitle">Add Department</h3>
+      <button type="button" class="modal-close" onclick="closeModal('deptModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.departments') }}">
+      <input type="hidden" id="deptAction" name="action" value="add">
+      <input type="hidden" id="deptId" name="dept_id" value="">
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="deptName" class="form-label">Department Name <span class="required">*</span></label>
+          <input type="text" id="deptName" name="name" class="form-control" required placeholder="e.g. Quality Assurance">
+        </div>
+
+        <div class="form-group">
+          <label for="deptCode" class="form-label">Department Code <span class="required">*</span></label>
+          <input type="text" id="deptCode" name="code" class="form-control" required placeholder="e.g. QA">
+        </div>
+
+        <div class="form-group">
+          <label for="deptDesc" class="form-label">Description</label>
+          <textarea id="deptDesc" name="description" class="form-control" rows="3" placeholder="Brief mandate and responsibilities..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('deptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="deptSubmitBtn">Save Department</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddDeptModal() {
+  document.getElementById('deptAction').value = 'add';
+  document.getElementById('deptId').value = '';
+  document.getElementById('deptName').value = '';
+  document.getElementById('deptCode').value = '';
+  document.getElementById('deptDesc').value = '';
+  document.getElementById('deptModalTitle').textContent = 'Add Department';
+  document.getElementById('deptSubmitBtn').textContent = 'Create Department';
+  openModal('deptModal');
+}
+
+function openEditDeptModal(id, name, code, desc) {
+  document.getElementById('deptAction').value = 'edit';
+  document.getElementById('deptId').value = id;
+  document.getElementById('deptName').value = name;
+  document.getElementById('deptCode').value = code;
+  document.getElementById('deptDesc').value = desc;
+  document.getElementById('deptModalTitle').textContent = 'Edit Department';
+  document.getElementById('deptSubmitBtn').textContent = 'Update Department';
+  openModal('deptModal');
+}
+</script>
+{% endblock %}

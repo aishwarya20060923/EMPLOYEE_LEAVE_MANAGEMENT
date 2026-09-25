@@ -1,0 +1,28 @@
+﻿{% extends "base.html" %}
+{% block title %}Organization Leave Calendar{% endblock %}
+{% block page_title %}Organization Leave Calendar{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Organization Leave & Holiday Schedule</h2>
+    <div style="display: flex; gap: 14px; font-size: 12px; align-items: center;">
+      <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #8b5cf6;"></span> Holiday</span>
+      <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span> Approved Leave</span>
+      <span style="display: flex; align-items: center; gap: 6px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span> Pending Leave</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="calendarContainer" class="calendar-container"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  initCalendar('calendarContainer', '{{ url_for("manager.api_calendar_events") }}');
+});
+</script>
+{% endblock %}

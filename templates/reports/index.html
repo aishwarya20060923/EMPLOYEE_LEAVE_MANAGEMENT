@@ -1,0 +1,294 @@
+﻿{% extends "base.html" %}
+{% block title %}Reports & Analytics{% endblock %}
+{% block page_title %}Reports & Organizational Analytics{% endblock %}
+
+{% block content %}
+<!-- Report Type Switcher & Action Buttons -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+  <div style="display: flex; gap: 8px;">
+    <a href="{{ url_for('reports.index', report_type='leave_requests') }}" class="btn {% if report_type == 'leave_requests' %}btn-primary{% else %}btn-outline{% endif %}">
+      📋 Leave Requests Report
+    </a>
+    <a href="{{ url_for('reports.index', report_type='balances') }}" class="btn {% if report_type == 'balances' %}btn-primary{% else %}btn-outline{% endif %}">
+      ⚖️ Leave Balances Report
+    </a>
+    <a href="{{ url_for('reports.index', report_type='attendance') }}" class="btn {% if report_type == 'attendance' %}btn-primary{% else %}btn-outline{% endif %}">
+      📅 Attendance Summary
+    </a>
+  </div>
+
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('reports.export_csv', report_type=report_type, department=dept_filter, employee=emp_filter, leave_type=type_filter, status=status_filter, from_date=from_date, to_date=to_date) }}" class="btn btn-outline">
+      📥 Export to CSV
+    </a>
+    <button type="button" class="btn btn-outline" onclick="window.print();">
+      🖨️ Print Report
+    </button>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('reports.index') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center;">
+    <input type="hidden" name="report_type" value="{{ report_type }}">
+
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label class="form-label" style="margin-bottom: 0; font-size: 12px;">From:</label>
+      <input type="date" name="from_date" class="form-control" style="max-width: 150px;" value="{{ from_date }}">
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 6px;">
+      <label class="form-label" style="margin-bottom: 0; font-size: 12px;">To:</label>
+      <input type="date" name="to_date" class="form-control" style="max-width: 150px;" value="{{ to_date }}">
+    </div>
+
+    <select name="department" class="form-control" style="max-width: 170px;">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="employee" class="form-control" style="max-width: 180px;">
+      <option value="">All Employees</option>
+      {% for e in employees %}
+      <option value="{{ e.id }}" {% if emp_filter == e.id %}selected{% endif %}>{{ e.full_name }}</option>
+      {% endfor %}
+    </select>
+
+    {% if report_type == 'leave_requests' or report_type == 'balances' %}
+    <select name="leave_type" class="form-control" style="max-width: 160px;">
+      <option value="">All Leave Types</option>
+      {% for lt in leave_types %}
+      <option value="{{ lt.id }}" {% if type_filter == lt.id %}selected{% endif %}>{{ lt.name }}</option>
+      {% endfor %}
+    </select>
+    {% endif %}
+
+    {% if report_type == 'leave_requests' %}
+    <select name="status" class="form-control" style="max-width: 140px;">
+      <option value="">All Statuses</option>
+      <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+      <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+      <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+    {% endif %}
+
+    <button type="submit" class="btn btn-outline">Apply Filters</button>
+    <a href="{{ url_for('reports.index', report_type=report_type) }}" class="btn btn-outline" style="color: var(--slate-500);">Reset</a>
+  </form>
+</div>
+
+<!-- Summary Metrics Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Filtered Records</span>
+      <span class="kpi-value">{{ summary.total_records }}</span>
+      <span class="kpi-subtext">Rows matching criteria</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-blue">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    </div>
+  </div>
+
+  {% if report_type == 'leave_requests' %}
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Days Requested</span>
+      <span class="kpi-value" style="color: var(--primary-700);">{{ summary.total_days }}</span>
+      <span class="kpi-subtext">Across all filtered leaves</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-purple">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Approved Leaves</span>
+      <span class="kpi-value" style="color: var(--success);">{{ summary.approved_count }}</span>
+      <span class="kpi-subtext">Pending: {{ summary.pending_count }} | Rejected: {{ summary.rejected_count }}</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-green">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  {% elif report_type == 'balances' %}
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Quota Allocated</span>
+      <span class="kpi-value">{{ summary.total_entitled }}</span>
+      <span class="kpi-subtext">Entitled days</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-purple">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Remaining Days</span>
+      <span class="kpi-value" style="color: var(--success);">{{ summary.total_remaining }}</span>
+      <span class="kpi-subtext">Used: {{ summary.total_used }} days</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-green">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  {% elif report_type == 'attendance' %}
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Present Count</span>
+      <span class="kpi-value" style="color: var(--success);">{{ summary.present_count }}</span>
+      <span class="kpi-subtext">Attended duty</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-green">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Leave / Absent</span>
+      <span class="kpi-value" style="color: var(--danger);">{{ summary.leave_count }} / {{ summary.absent_count }}</span>
+      <span class="kpi-subtext">Approved leave vs unapproved</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-red">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Report Data Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">
+      {% if report_type == 'leave_requests' %}Leave Applications & History
+      {% elif report_type == 'balances' %}Employee Leave Quotas & Balances
+      {% else %}Attendance Logs
+      {% endif %}
+    </h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if records %}
+    <div class="table-responsive">
+      <table class="data-table">
+        {% if report_type == 'leave_requests' %}
+        <thead>
+          <tr>
+            <th>Req ID</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Leave Type</th>
+            <th>Dates</th>
+            <th>Days</th>
+            <th>Status</th>
+            <th>Reason</th>
+            <th>Applied</th>
+            <th>Reviewed By</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td><strong>{{ r.request_number }}</strong></td>
+            <td>
+              <div style="font-weight: 600; color: var(--slate-900);">{{ r.employee.full_name }}</div>
+              <div style="font-size: 11px; color: var(--slate-400);">{{ r.employee.employee_id }}</div>
+            </td>
+            <td>{{ r.employee.department.name if r.employee.department else 'N/A' }}</td>
+            <td>{{ r.leave_type.name }}</td>
+            <td>{{ r.start_date.strftime('%d %b') }} - {{ r.end_date.strftime('%d %b %Y') }}</td>
+            <td><strong>{{ r.days_requested }}</strong></td>
+            <td>
+              <span class="badge badge-{{ r.status.lower() }}">
+                <span class="badge-dot"></span>
+                {{ r.status }}
+              </span>
+            </td>
+            <td style="max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ r.reason }}">
+              {{ r.reason }}
+            </td>
+            <td>{{ r.applied_at.strftime('%d %b %Y') }}</td>
+            <td>{{ r.reviewed_by.full_name if r.reviewed_by else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+        {% elif report_type == 'balances' %}
+        <thead>
+          <tr>
+            <th>Emp ID</th>
+            <th>Employee Name</th>
+            <th>Department</th>
+            <th>Leave Type</th>
+            <th>Entitled</th>
+            <th>Used</th>
+            <th>Remaining</th>
+            <th>Year</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in records %}
+          <tr>
+            <td><strong>{{ b.employee.employee_id }}</strong></td>
+            <td><strong style="color: var(--slate-900);">{{ b.employee.full_name }}</strong></td>
+            <td>{{ b.employee.department.name if b.employee.department else 'N/A' }}</td>
+            <td>{{ b.leave_type.name }}</td>
+            <td>{{ b.entitled_days }} days</td>
+            <td style="color: var(--warning); font-weight: 600;">{{ b.used_days }} days</td>
+            <td style="color: var(--success); font-weight: 800;">{{ b.remaining_days }} days</td>
+            <td>{{ b.year }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+        {% elif report_type == 'attendance' %}
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Emp ID</th>
+            <th>Employee Name</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in records %}
+          <tr>
+            <td><strong>{{ a.date.strftime('%d %b %Y') }}</strong></td>
+            <td>{{ a.employee.employee_id }}</td>
+            <td>{{ a.employee.full_name }}</td>
+            <td>{{ a.employee.department.name if a.employee.department else 'N/A' }}</td>
+            <td>
+              <span class="badge badge-{{ a.status.lower().replace(' ', '') }}">
+                {{ a.status }}
+              </span>
+            </td>
+            <td>{{ a.check_in or '—' }}</td>
+            <td>{{ a.check_out or '—' }}</td>
+            <td style="color: var(--slate-500); font-size: 12px;">{{ a.notes or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% endif %}
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">No Records Found</div>
+      <p class="empty-text">Try adjusting the filters to see more results.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

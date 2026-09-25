@@ -1,0 +1,104 @@
+﻿{% extends "base.html" %}
+{% block title %}Manage Employees{% endblock %}
+{% block page_title %}Employee Management{% endblock %}
+
+{% block content %}
+<!-- Filter & Add Button Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('admin.employees') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center;">
+    <input type="text" name="search" class="form-control" style="max-width: 220px;" placeholder="Search employee..." value="{{ search_query }}">
+
+    <select name="department" class="form-control" style="max-width: 180px;">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="role" class="form-control" style="max-width: 150px;">
+      <option value="">All Roles</option>
+      <option value="Admin" {% if role_filter == 'Admin' %}selected{% endif %}>Admin</option>
+      <option value="Manager" {% if role_filter == 'Manager' %}selected{% endif %}>Manager</option>
+      <option value="Employee" {% if role_filter == 'Employee' %}selected{% endif %}>Employee</option>
+    </select>
+
+    <select name="status" class="form-control" style="max-width: 150px;">
+      <option value="">All Statuses</option>
+      <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+      <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+    </select>
+
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if dept_filter or role_filter or status_filter or search_query %}
+    <a href="{{ url_for('admin.employees') }}" class="btn btn-outline" style="color: var(--slate-500);">Clear</a>
+    {% endif %}
+
+    <div style="margin-left: auto;">
+      <a href="{{ url_for('admin.add_employee') }}" class="btn btn-primary">+ Add New Employee</a>
+    </div>
+  </form>
+</div>
+
+<!-- Employees Table -->
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    {% if employees %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Role</th>
+            <th>Manager</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in employees %}
+          <tr>
+            <td><strong>{{ e.employee_id }}</strong></td>
+            <td>
+              <div style="font-weight: 600; color: var(--slate-900);">{{ e.full_name }}</div>
+            </td>
+            <td>{{ e.email }}</td>
+            <td>{{ e.department.name if e.department else 'N/A' }}</td>
+            <td>{{ e.designation or '—' }}</td>
+            <td>
+              <span class="sidebar-role-badge role-{{ e.role }}">{{ e.role }}</span>
+            </td>
+            <td>{{ e.manager.full_name if e.manager else 'None' }}</td>
+            <td>
+              <span class="badge {% if e.status == 'Active' %}badge-present{% else %}badge-absent{% endif %}">
+                {{ e.status }}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <a href="{{ url_for('admin.edit_employee', id=e.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('admin.toggle_employee_status', id=e.id) }}" style="display: inline;">
+                  <button type="submit" class="btn btn-outline btn-sm" style="{% if e.status == 'Active' %}color: var(--danger); border-color: var(--danger-border);{% else %}color: var(--success); border-color: var(--success-border);{% endif %}" onclick="return confirm('Toggle status for {{ e.full_name }}?');">
+                    {% if e.status == 'Active' %}Deactivate{% else %}Activate{% endif %}
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <div class="empty-title">No Employees Found</div>
+      <p class="empty-text">No records match the current filter.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

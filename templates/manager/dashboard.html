@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}Manager Dashboard{% endblock %}
+{% block page_title %}HR & Manager Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Overview Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Employees</span>
+      <span class="kpi-value">{{ total_employees }}</span>
+      <span class="kpi-subtext">Active team members</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-blue">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Pending Requests</span>
+      <span class="kpi-value" style="color: var(--warning);">{{ pending_count }}</span>
+      <span class="kpi-subtext">Requires review</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-yellow">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Approved Leaves</span>
+      <span class="kpi-value" style="color: var(--success);">{{ approved_count }}</span>
+      <span class="kpi-subtext">Processed & granted</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-green">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">On Leave Today</span>
+      <span class="kpi-value" style="color: var(--purple);">{{ on_leave_today|length }}</span>
+      <span class="kpi-subtext">Currently out of office</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-purple">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Pending Requests Queue for Immediate Manager Decision -->
+<div class="card">
+  <div class="card-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h2 class="card-title">Pending Leave Requests Awaiting Action</h2>
+      {% if pending_count > 0 %}
+      <span class="badge badge-pending">{{ pending_count }} Pending</span>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('manager.leave_requests', status='Pending') }}" class="btn btn-outline btn-sm">View Full Queue</a>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if pending_requests %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="min-width: 100px;">Req ID</th>
+            <th style="min-width: 180px;">Employee</th>
+            <th style="min-width: 100px;">Type</th>
+            <th style="min-width: 150px;">Dates</th>
+            <th style="min-width: 60px;">Days</th>
+            <th style="min-width: 180px;">Reason</th>
+            <th style="min-width: 100px;">Applied</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in pending_requests %}
+          <tr>
+            <td><strong style="color: var(--slate-900);">{{ r.request_number }}</strong></td>
+            <td>
+              <div style="font-weight: 700; color: var(--slate-900);">{{ r.employee.full_name }}</div>
+              <div style="font-size: 11px; color: var(--slate-500);">{{ r.employee.employee_id }} • {{ r.employee.department.name if r.employee.department else 'N/A' }}</div>
+            </td>
+            <td>
+              <span class="badge" style="background: var(--slate-100); color: var(--slate-800); font-weight: 600;">
+                {{ r.leave_type.code }}
+              </span>
+              {% if r.is_half_day %}
+              <div style="font-size: 10px; color: var(--purple-text); margin-top: 2px;">Half Day</div>
+              {% endif %}
+            </td>
+            <td><strong>{{ r.start_date.strftime('%d %b') }} – {{ r.end_date.strftime('%d %b %Y') }}</strong></td>
+            <td><strong style="font-size: 14px; color: var(--primary-700);">{{ r.days_requested }}d</strong></td>
+            <td style="max-width: 220px;" title="{{ r.reason }}">
+              <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px;">{{ r.reason }}</div>
+            </td>
+            <td style="font-size: 12px; color: var(--slate-500);">{{ r.applied_at.strftime('%d %b %Y') }}</td>
+            <td class="col-actions">
+              <div class="action-btn-row">
+                <form method="POST" action="{{ url_for('manager.approve_leave', request_id=r.id) }}" style="display: inline; margin: 0;">
+                  <button type="submit" class="btn-approve-sm" onclick="return confirm('Approve leave request {{ r.request_number }} for {{ r.employee.full_name }}?');">
+                    ✓ Approve
+                  </button>
+                </form>
+                <button type="button" class="btn-reject-sm" onclick="openRejectModal('{{ r.id }}', '{{ r.request_number }}', '{{ r.employee.full_name }}');">
+                  ✕ Reject
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">✅</div>
+      <div class="empty-title">All Caught Up!</div>
+      <p class="empty-text">No pending leave requests awaiting approval at this time.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- 4 Chart.js HR Analytics Visualizations -->
+<div class="grid-2" style="margin-bottom: 24px;">
+  <!-- Chart 1: Monthly Trends -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Leave Applications by Month</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="monthlyChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Status Breakdown -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Leave Status Distribution</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="statusChart" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom: 24px;">
+  <!-- Chart 3: Leave Type Distribution -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Leave Type Utilization</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="typeChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 4: Department-wise usage -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <h3 class="card-title">Department-wise Approved Leave Days</h3>
+    </div>
+    <div class="card-body">
+      <canvas id="deptChart" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Employees Currently on Leave & Upcoming -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Employees on Leave Today ({{ today.strftime('%d %b %Y') }})</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if on_leave_today %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Leave Type</th>
+              <th>Until</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in on_leave_today %}
+            <tr>
+              <td><strong>{{ l.employee.full_name }}</strong></td>
+              <td>{{ l.employee.department.name if l.employee.department else 'N/A' }}</td>
+              <td>{{ l.leave_type.code }}</td>
+              <td>{{ l.end_date.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding: 24px; text-align: center; color: var(--slate-500); font-size: 13px;">
+        No employees currently out of office today.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Upcoming Approved Leaves (Next 14 Days)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if upcoming_leaves %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Dates</th>
+              <th>Days</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in upcoming_leaves %}
+            <tr>
+              <td><strong>{{ u.employee.full_name }}</strong></td>
+              <td>{{ u.start_date.strftime('%d %b') }} - {{ u.end_date.strftime('%d %b %Y') }}</td>
+              <td>{{ u.days_requested }}</td>
+              <td>{{ u.leave_type.name }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding: 24px; text-align: center; color: var(--slate-500); font-size: 13px;">
+        No upcoming approved leaves in the next 14 days.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Reject Leave Request</h3>
+      <button type="button" class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+    </div>
+    <form method="POST" id="rejectForm" action="">
+      <div class="modal-body">
+        <p style="font-size: 13.5px; margin-bottom: 16px;">
+          Rejecting request <strong id="rejectReqNum"></strong> for <strong id="rejectEmpName"></strong>.
+        </p>
+        <div class="form-group">
+          <label for="rejection_reason" class="form-label">Rejection Reason <span class="required">*</span></label>
+          <textarea id="rejection_reason" name="rejection_reason" class="form-control" rows="3" placeholder="Explain the rationale (e.g. operational deadlines, critical project deliverable, insufficient coverage)..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('rejectModal')">Cancel</button>
+        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openRejectModal(reqId, reqNum, empName) {
+  const form = document.getElementById('rejectForm');
+  form.action = '/manager/reject-leave/' + reqId;
+  document.getElementById('rejectReqNum').textContent = reqNum;
+  document.getElementById('rejectEmpName').textContent = empName;
+  openModal('rejectModal');
+}
+
+// Chart.js Visualizations
+document.addEventListener('DOMContentLoaded', function () {
+  // Chart 1: Monthly Requests
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ months_labels|tojson }},
+      datasets: [{
+        label: 'Requests',
+        data: {{ monthly_data|tojson }},
+        backgroundColor: '#3b82f6',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+
+  // Chart 2: Status Breakdown
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Approved', 'Pending', 'Rejected', 'Cancelled'],
+      datasets: [{
+        data: [
+          {{ status_counts['Approved'] }},
+          {{ status_counts['Pending'] }},
+          {{ status_counts['Rejected'] }},
+          {{ status_counts['Cancelled'] }}
+        ],
+        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#94a3b8'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // Chart 3: Leave Type Distribution
+  new Chart(document.getElementById('typeChart'), {
+    type: 'pie',
+    data: {
+      labels: {{ type_labels|tojson }},
+      datasets: [{
+        data: {{ type_counts|tojson }},
+        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899']
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // Chart 4: Department usage
+  new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ dept_labels|tojson }},
+      datasets: [{
+        label: 'Approved Days Taken',
+        data: {{ dept_usage|tojson }},
+        backgroundColor: '#6366f1',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+});
+</script>
+{% endblock %}

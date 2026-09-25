@@ -1,0 +1,124 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} - Employee Details{% endblock %}
+{% block page_title %}{{ employee.full_name }} ({{ employee.employee_id }}){% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+  <a href="{{ url_for('manager.employees') }}" class="btn btn-outline btn-sm">← Back to Directory</a>
+</div>
+
+<!-- Employee Header Card -->
+<div class="card">
+  <div class="card-body">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+      <div style="display: flex; align-items: center; gap: 18px;">
+        <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--primary-600); color: #fff; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center;">
+          {{ employee.first_name[0] }}{{ employee.last_name[0] }}
+        </div>
+        <div>
+          <h2 style="font-size: 20px; font-weight: 800; color: var(--slate-900);">{{ employee.full_name }}</h2>
+          <p style="font-size: 13.5px; color: var(--slate-500);">{{ employee.designation }} • {{ employee.department.name if employee.department else 'General' }}</p>
+          <div style="display: flex; gap: 10px; margin-top: 6px;">
+            <span class="badge" style="background: var(--slate-100); color: var(--slate-700);">ID: {{ employee.employee_id }}</span>
+            <span class="badge {% if employee.status == 'Active' %}badge-present{% else %}badge-absent{% endif %}">{{ employee.status }}</span>
+            <span class="badge" style="background: var(--primary-50); color: var(--primary-700);">Role: {{ employee.role }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 13px; color: var(--slate-600); line-height: 1.6;">
+        <div><strong>Email:</strong> {{ employee.email }}</div>
+        <div><strong>Phone:</strong> {{ employee.phone or 'Not provided' }}</div>
+        <div><strong>Joined:</strong> {{ employee.joining_date.strftime('%d %b %Y') }}</div>
+        <div><strong>Manager:</strong> {{ employee.manager.full_name if employee.manager else 'None' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leave Balances -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Current Leave Balances (Year {{ current_year }})</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Leave Type</th>
+            <th>Type Code</th>
+            <th>Total Entitlement</th>
+            <th>Used Days</th>
+            <th>Remaining Days</th>
+            <th>Quota Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in balances %}
+          <tr>
+            <td><strong>{{ b.leave_type.name }}</strong></td>
+            <td><span class="badge" style="background: var(--slate-100); color: var(--slate-700);">{{ b.leave_type.code }}</span></td>
+            <td>{{ b.entitled_days }} days</td>
+            <td style="color: var(--warning); font-weight: 600;">{{ b.used_days }} days</td>
+            <td style="color: var(--success); font-weight: 800;">{{ b.remaining_days }} days</td>
+            <td style="width: 180px;">
+              {% set pct = (b.used_days / b.entitled_days * 100) if b.entitled_days > 0 else 0 %}
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: {{ pct }}%;"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Leave Requests History -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Leave History</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if requests %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Req ID</th>
+            <th>Type</th>
+            <th>Dates</th>
+            <th>Days</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Applied On</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+          <tr>
+            <td><strong>{{ r.request_number }}</strong></td>
+            <td>{{ r.leave_type.name }}</td>
+            <td>{{ r.start_date.strftime('%d %b') }} - {{ r.end_date.strftime('%d %b %Y') }}</td>
+            <td>{{ r.days_requested }}</td>
+            <td style="max-width: 250px;" title="{{ r.reason }}">{{ r.reason }}</td>
+            <td>
+              <span class="badge badge-{{ r.status.lower() }}">
+                <span class="badge-dot"></span>
+                {{ r.status }}
+              </span>
+            </td>
+            <td>{{ r.applied_at.strftime('%d %b %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding: 24px; text-align: center; color: var(--slate-500);">No leave history recorded yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

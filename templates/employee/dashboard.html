@@ -1,0 +1,206 @@
+﻿{% extends "base.html" %}
+{% block title %}Employee Dashboard{% endblock %}
+{% block page_title %}Employee Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Overview Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Total Entitlement</span>
+      <span class="kpi-value">{{ total_entitlement }}</span>
+      <span class="kpi-subtext">All leave types in {{ current_year }}</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-blue">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Leaves Used</span>
+      <span class="kpi-value" style="color: var(--warning);">{{ total_used }}</span>
+      <span class="kpi-subtext">Approved leaves deducted</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-yellow">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Leaves Remaining</span>
+      <span class="kpi-value" style="color: var(--success);">{{ total_remaining }}</span>
+      <span class="kpi-subtext">Available balance</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-green">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <span class="kpi-label">Pending Requests</span>
+      <span class="kpi-value" style="color: var(--primary-600);">{{ pending_count }}</span>
+      <span class="kpi-subtext">Under managerial review</span>
+    </div>
+    <div class="kpi-icon-box kpi-icon-purple">
+      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Leave Balance Breakdown by Leave Type -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Leave Balance Breakdown ({{ current_year }})</h2>
+    <div class="card-actions">
+      <a href="{{ url_for('employee.apply_leave') }}" class="btn btn-primary btn-sm">
+        + Apply for Leave
+      </a>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="grid-3">
+      {% for b in balances %}
+      <div class="balance-card">
+        <div class="balance-card-header">
+          <div>
+            <div class="balance-name">{{ b.type_name }}</div>
+            <span class="badge" style="background: var(--slate-100); color: var(--slate-600); font-size: 10px;">{{ b.code }} • {% if b.is_paid %}Paid{% else %}Unpaid{% endif %}</span>
+          </div>
+          <div class="balance-stat">{{ b.remaining }} <span style="font-size: 13px; font-weight: 500; color: var(--slate-400);">/ {{ b.entitled }}</span></div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width: {{ b.percent_used }}%;"></div>
+        </div>
+        <div class="balance-meta">
+          <span>Used: <strong>{{ b.used }} days</strong></span>
+          <span>Remaining: <strong style="color: var(--success);">{{ b.remaining }} days</strong></span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- 2-Column Section: Recent Requests & Upcoming Approved Leaves + Attendance -->
+<div class="grid-2">
+  <!-- Recent Leave Requests -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Recent Leave Requests</h2>
+      <a href="{{ url_for('employee.my_leaves') }}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      {% if recent_requests %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Req ID</th>
+              <th>Type</th>
+              <th>Dates</th>
+              <th>Days</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recent_requests %}
+            <tr>
+              <td><span style="font-weight: 600; color: var(--slate-900);">{{ r.request_number }}</span></td>
+              <td>{{ r.leave_type.name }}</td>
+              <td>{{ r.start_date.strftime('%d %b') }} - {{ r.end_date.strftime('%d %b %Y') }}</td>
+              <td>{{ r.days_requested }}</td>
+              <td>
+                <span class="badge badge-{{ r.status.lower() }}">
+                  <span class="badge-dot"></span>
+                  {{ r.status }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🏖️</div>
+        <div class="empty-title">No Leave Requests Yet</div>
+        <p class="empty-text">You haven't submitted any leave requests. Need time off? Submit your request anytime.</p>
+        <a href="{{ url_for('employee.apply_leave') }}" class="btn btn-primary btn-sm">Apply for Leave</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Upcoming Leaves & Monthly Attendance Widget -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <!-- Upcoming Approved Leaves -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <h2 class="card-title">Upcoming Approved Leaves</h2>
+      </div>
+      <div class="card-body">
+        {% if upcoming_leaves %}
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for u in upcoming_leaves %}
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--success-bg); border-radius: var(--radius-md); border-left: 4px solid var(--success);">
+              <div>
+                <div style="font-weight: 700; color: var(--success-text); font-size: 14px;">{{ u.leave_type.name }} ({{ u.days_requested }} days)</div>
+                <div style="font-size: 12px; color: var(--slate-600); margin-top: 2px;">{{ u.start_date.strftime('%A, %d %B %Y') }} to {{ u.end_date.strftime('%A, %d %B %Y') }}</div>
+              </div>
+              <span class="badge badge-approved"><span class="badge-dot"></span> Approved</span>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--slate-500); font-size: 13px;">No approved leaves scheduled in the upcoming weeks.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Attendance Summary Card -->
+    <div class="card" style="margin-bottom: 0;">
+      <div class="card-header">
+        <h2 class="card-title">Attendance Overview ({{ today.strftime('%B %Y') }})</h2>
+        <a href="{{ url_for('employee.attendance') }}" class="btn btn-outline btn-sm">Details</a>
+      </div>
+      <div class="card-body">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <div style="font-size: 26px; font-weight: 800; color: var(--primary-700);">{{ attendance_rate }}%</div>
+            <div style="font-size: 12px; color: var(--slate-500);">Monthly Attendance Rate</div>
+          </div>
+          {% if not today_attendance %}
+          <form method="POST" action="{{ url_for('employee.attendance') }}">
+            <button type="submit" name="action" value="checkin" class="btn btn-success btn-sm">
+              ✓ Check In Today
+            </button>
+          </form>
+          {% else %}
+          <span class="badge badge-present" style="padding: 6px 12px; font-size: 12px;">
+            ✓ Marked {{ today_attendance.status }} ({{ today_attendance.check_in or 'Logged' }})
+          </span>
+          {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center;">
+          <div style="background: var(--slate-50); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
+            <div style="font-weight: 800; color: var(--success); font-size: 16px;">{{ present_days }}</div>
+            <div style="font-size: 11px; color: var(--slate-500);">Present</div>
+          </div>
+          <div style="background: var(--slate-50); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
+            <div style="font-weight: 800; color: var(--purple); font-size: 16px;">{{ leave_days }}</div>
+            <div style="font-size: 11px; color: var(--slate-500);">Leave</div>
+          </div>
+          <div style="background: var(--slate-50); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--slate-200);">
+            <div style="font-weight: 800; color: var(--danger); font-size: 16px;">{{ absent_days }}</div>
+            <div style="font-size: 11px; color: var(--slate-500);">Absent</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

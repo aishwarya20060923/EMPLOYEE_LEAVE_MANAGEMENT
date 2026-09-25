@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Manage Leave Requests{% endblock %}
+{% block page_title %}Leave Requests Management{% endblock %}
+
+{% block content %}
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('manager.leave_requests') }}" style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%; align-items: center;">
+    <input type="text" name="search" class="form-control" style="max-width: 220px;" placeholder="Search employee, ID, reason..." value="{{ search_query }}">
+
+    <select name="status" class="form-control" style="max-width: 160px;">
+      <option value="">All Statuses</option>
+      <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+      <option value="Approved" {% if status_filter == 'Approved' %}selected{% endif %}>Approved</option>
+      <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+      <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+    </select>
+
+    <select name="department" class="form-control" style="max-width: 180px;">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.id }}" {% if dept_filter == d.id %}selected{% endif %}>{{ d.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="leave_type" class="form-control" style="max-width: 180px;">
+      <option value="">All Leave Types</option>
+      {% for lt in leave_types %}
+      <option value="{{ lt.id }}" {% if type_filter == lt.id %}selected{% endif %}>{{ lt.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if status_filter or dept_filter or type_filter or search_query %}
+    <a href="{{ url_for('manager.leave_requests') }}" class="btn btn-outline" style="color: var(--slate-500);">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Requests Table -->
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    {% if leave_requests %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="min-width: 100px;">Req ID</th>
+            <th style="min-width: 180px;">Employee</th>
+            <th style="min-width: 100px;">Type</th>
+            <th style="min-width: 150px;">Dates</th>
+            <th style="min-width: 60px;">Days</th>
+            <th style="min-width: 110px;">Status</th>
+            <th style="min-width: 180px;">Reason</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in leave_requests %}
+          <tr>
+            <td><strong style="color: var(--slate-900);">{{ r.request_number }}</strong></td>
+            <td>
+              <div style="font-weight: 700; color: var(--slate-900);">{{ r.employee.full_name }}</div>
+              <div style="font-size: 11px; color: var(--slate-500);">{{ r.employee.employee_id }} • {{ r.employee.department.name if r.employee.department else 'N/A' }}</div>
+            </td>
+            <td>
+              <span class="badge" style="background: var(--slate-100); color: var(--slate-800); font-weight: 600;">
+                {{ r.leave_type.code }}
+              </span>
+              {% if r.is_half_day %}
+              <div style="font-size: 10px; color: var(--purple-text); margin-top: 2px;">{{ r.half_day_type or 'Half Day' }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <div style="font-weight: 600;">{{ r.start_date.strftime('%d %b') }} – {{ r.end_date.strftime('%d %b %Y') }}</div>
+              <div style="font-size: 11px; color: var(--slate-400);">Applied: {{ r.applied_at.strftime('%d %b %Y') }}</div>
+            </td>
+            <td><strong style="font-size: 14px; color: var(--primary-700);">{{ r.days_requested }}d</strong></td>
+            <td>
+              <span class="badge badge-{{ r.status.lower() }}">
+                <span class="badge-dot"></span>
+                {{ r.status }}
+              </span>
+              {% if r.reviewed_by %}
+              <div style="font-size: 10.5px; color: var(--slate-400); margin-top: 3px;">by {{ r.reviewed_by.first_name }}</div>
+              {% endif %}
+            </td>
+            <td style="max-width: 220px;" title="{{ r.reason }}">
+              <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px;">{{ r.reason }}</div>
+              {% if r.rejection_reason %}
+              <div style="font-size: 11px; color: var(--danger); margin-top: 2px; font-weight: 500;">Reason: {{ r.rejection_reason }}</div>
+              {% endif %}
+              {% if r.attachment_filename %}
+              <a href="{{ url_for('static', filename='uploads/' + r.attachment_filename) }}" target="_blank" style="font-size: 11px; color: var(--primary-600); display: block; margin-top: 2px;">📎 Attachment</a>
+              {% endif %}
+            </td>
+            <td class="col-actions">
+              {% if r.status == 'Pending' %}
+              <div class="action-btn-row">
+                <form method="POST" action="{{ url_for('manager.approve_leave', request_id=r.id) }}" style="display: inline; margin: 0;">
+                  <button type="submit" class="btn-approve-sm" onclick="return confirm('Approve leave request {{ r.request_number }} for {{ r.employee.full_name }}?');">
+                    ✓ Approve
+                  </button>
+                </form>
+                <button type="button" class="btn-reject-sm" onclick="openRejectModal('{{ r.id }}', '{{ r.request_number }}', '{{ r.employee.full_name }}');">
+                  ✕ Reject
+                </button>
+              </div>
+              {% else %}
+              <span class="badge" style="background: var(--slate-100); color: var(--slate-500); font-size: 11px;">Completed</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📁</div>
+      <div class="empty-title">No Requests Found</div>
+      <p class="empty-text">No leave requests match your selected criteria.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Reject Leave Request</h3>
+      <button type="button" class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+    </div>
+    <form method="POST" id="rejectForm" action="">
+      <div class="modal-body">
+        <p style="font-size: 13.5px; margin-bottom: 16px;">
+          Rejecting request <strong id="rejectReqNum"></strong> for <strong id="rejectEmpName"></strong>.
+        </p>
+        <div class="form-group">
+          <label for="rejection_reason" class="form-label">Rejection Reason <span class="required">*</span></label>
+          <textarea id="rejection_reason" name="rejection_reason" class="form-control" rows="3" placeholder="Specify the reason for rejection..." required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('rejectModal')">Cancel</button>
+        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openRejectModal(reqId, reqNum, empName) {
+  const form = document.getElementById('rejectForm');
+  form.action = '/manager/reject-leave/' + reqId;
+  document.getElementById('rejectReqNum').textContent = reqNum;
+  document.getElementById('rejectEmpName').textContent = empName;
+  openModal('rejectModal');
+}
+</script>
+{% endblock %}

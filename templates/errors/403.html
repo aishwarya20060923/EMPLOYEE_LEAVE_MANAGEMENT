@@ -1,0 +1,14 @@
+﻿{% extends "base.html" %}
+{% block title %}403 Access Forbidden{% endblock %}
+{% block page_title %}Access Denied{% endblock %}
+
+{% block content %}
+<div class="empty-state" style="padding: 80px 20px;">
+  <div style="font-size: 72px; font-weight: 900; color: var(--danger); line-height: 1; margin-bottom: 16px;">403</div>
+  <h2 class="empty-title" style="font-size: 22px;">Access Forbidden</h2>
+  <p class="empty-text">You do not have administrative or role-based permission to view this resource. Your account role does not have access to this section.</p>
+  <a href="/" class="btn btn-primary" style="margin-top: 16px;">
+    Return to Dashboard
+  </a>
+</div>
+{% endblock %}

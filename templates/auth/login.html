@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Employee Leave Management System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-brand">E</div>
+      <h1 class="auth-title">Employee Leave Management</h1>
+      <p class="auth-subtitle">Human Resource & Leave Portal</p>
+    </div>
+
+    <!-- Flash Alerts -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom: 20px;">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('auth.login') }}">
+      <div class="form-group">
+        <label for="loginEmail" class="form-label">Email Address <span class="required">*</span></label>
+        <input type="email" id="loginEmail" name="email" class="form-control" placeholder="name@example.com" value="{{ email or '' }}" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="loginPassword" class="form-label">Password <span class="required">*</span></label>
+        <input type="password" id="loginPassword" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--slate-600); cursor: pointer;">
+          <input type="checkbox" name="remember" value="1"> Remember this device
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">
+        Sign In to Portal
+      </button>
+    </form>
+
+    <!-- Demo Credentials Section for Evaluators / Viva -->
+    <div class="demo-accounts-box">
+      <div class="demo-title">
+        <span>Demo Credentials (1-Click Test)</span>
+        <span style="font-size: 10px; color: var(--primary-600);">CRT Review Ready</span>
+      </div>
+      <div class="demo-chips">
+        <a href="{{ url_for('auth.quick_login', role='admin') }}" class="demo-btn" title="Click to log in instantly as Admin">
+          <div>
+            <strong>Admin:</strong> admin@example.com
+            <div style="color: var(--slate-400); font-size: 11px;">Password: Admin@123</div>
+          </div>
+          <span class="badge role-Admin" style="font-size: 10px;">Quick Login →</span>
+        </a>
+
+        <a href="{{ url_for('auth.quick_login', role='manager') }}" class="demo-btn" title="Click to log in instantly as HR / Manager">
+          <div>
+            <strong>HR / Manager:</strong> manager@example.com
+            <div style="color: var(--slate-400); font-size: 11px;">Password: Manager@123</div>
+          </div>
+          <span class="badge role-Manager" style="font-size: 10px;">Quick Login →</span>
+        </a>
+
+        <a href="{{ url_for('auth.quick_login', role='employee') }}" class="demo-btn" title="Click to log in instantly as Employee">
+          <div>
+            <strong>Employee:</strong> employee@example.com
+            <div style="color: var(--slate-400); font-size: 11px;">Password: Employee@123</div>
+          </div>
+          <span class="badge role-Employee" style="font-size: 10px;">Quick Login →</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
